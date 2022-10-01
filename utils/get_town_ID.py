@@ -12,6 +12,7 @@ def get_town_ID(town_name):
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
+
     response = requests.request("GET", url, headers=headers, params=querystring)
     data_response = json.loads(response.text)
 
