@@ -1,7 +1,7 @@
 import json
-import requests
 import re
 import os
+from utils.request_to_api import request_to_api
 
 def get_areas(town_name="new york"):
     url = "https://hotels4.p.rapidapi.com/locations/v2/search"
@@ -13,14 +13,14 @@ def get_areas(town_name="new york"):
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
-    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = request_to_api(url=url, headers=headers, querystring=querystring)
 
     pattern1 = r'(?<="CITY_GROUP",).+?[\]]'
     find = re.search(pattern1, response.text)
     if find:
         data_response = json.loads(f"{{{find[0]}}}")
 
-    pattern = r"<.*>,"
+    pattern = r"<.*>"
     cities = []
     for area in data_response["entities"]:
         name = re.sub(pattern, "", area["caption"])
