@@ -1,6 +1,7 @@
 import json
 import requests
 import os
+from utils.request_to_api import request_to_api
 
 def get_town_ID(town_name):
     url = "https://hotels4.p.rapidapi.com/locations/v2/search"
@@ -13,7 +14,7 @@ def get_town_ID(town_name):
     }
 
 
-    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = request_to_api(url=url, headers=headers, querystring=querystring)
     data_response = json.loads(response.text)
 
     town_ID = data_response["suggestions"][0]["entities"][0]["destinationId"]

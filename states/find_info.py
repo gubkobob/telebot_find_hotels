@@ -6,3 +6,4 @@ class FindInfoState(StatesGroup):
     num_hotels = State()
     photo_choise = State()
     num_photo = State()
+    exit = State()

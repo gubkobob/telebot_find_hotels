@@ -1,7 +1,7 @@
 
 from operator import itemgetter
 
-def lowprice(hotels, count, max_count):
+def highprice(hotels, count, max_count):
 
     if count > max_count:
         count = max_count
@@ -17,7 +17,7 @@ def lowprice(hotels, count, max_count):
         my_hotel["id"] = hotel["id"]
         my_result_hotels.append(my_hotel)
 
-    my_result_hotels = sorted(my_result_hotels, key=itemgetter("price"))
+    my_result_hotels = sorted(my_result_hotels, key=itemgetter("price"), reverse=True)
 
     if len(my_result_hotels) < count:
         count = len(my_result_hotels)

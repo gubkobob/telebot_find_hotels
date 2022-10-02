@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import datetime
+from utils.request_to_api import request_to_api
 
 
 def get_hotels(town_ID):
@@ -20,7 +21,7 @@ def get_hotels(town_ID):
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
-    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = request_to_api(url=url, headers=headers, querystring=querystring)
 
     data_response = json.loads(response.text)
 
