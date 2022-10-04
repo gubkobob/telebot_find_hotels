@@ -1,8 +1,12 @@
 from telebot.handler_backends import State, StatesGroup
 
-class FindInfoState(StatesGroup):
+class BestdealInfoState(StatesGroup):
+
     town = State()
-    town_area = State()
+    min_price = State()
+    max_price = State()
+    min_dist = State()
+    max_dist = State()
     num_hotels = State()
     photo_choise = State()
     num_photo = State()

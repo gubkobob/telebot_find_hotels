@@ -3,10 +3,12 @@ from states.find_info import FindInfoState
 from telebot.types import Message
 from keyboards.inline.city_choise import city_choise
 from keyboards.reply.yes_no_choise import yes_no_choise
+from keyboards.reply.ok_choise import ok_choise
 from utils.get_hotels import get_hotels
 from utils.find_lowprice import lowprice
 from utils.find_highprice import highprice
 from utils.get_photos import get_photos
+from utils.get_areas import get_areas
 
 
 @bot.message_handler(commands=['lowprice', 'highprice'])
@@ -16,33 +18,40 @@ def survey(message: Message) -> None:
 
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         data["request"] = message.text
-    # print(message.text)
+
 
 
 @bot.message_handler(state=FindInfoState.town)
 def get_town(message: Message) -> None:
     if message.text.isalpha():
-        bot.send_message(message.from_user.id, "Уточните пожалуйста:", reply_markup=city_choise(message.text))
-        bot.set_state(message.from_user.id, FindInfoState.town_area, message.chat.id)
+        if get_areas(message.text):
 
-        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-            data["town"] = message.text
+            bot.send_message(message.from_user.id, "Уточните пожалуйста:", reply_markup=city_choise(message.text))
+            bot.set_state(message.from_user.id, FindInfoState.town_area, message.chat.id)
+
+            with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+                data["town"] = message.text
+        else:
+            bot.send_message(message.from_user.id, "Такого города в базе нет")
 
     else:
         bot.send_message(message.from_user.id, "Название города может содержать только буквы")
-    # print(message)
 
-@bot.callback_query_handler(func=lambda call: True)#, state=FindInfoState.town_area)
+
+@bot.callback_query_handler(func=lambda call: True)
 def callback_place(call):
-    bot.send_message(call.message.chat.id, "Сколько отелей вывести в результате")
-    bot.set_state(call.from_user.id, FindInfoState.num_hotels)
+    if call.data:
+        bot.send_message(call.message.chat.id, "Сколько отелей вывести в результате")
+        bot.set_state(call.from_user.id, FindInfoState.num_hotels)
 
-    with bot.retrieve_data(call.from_user.id) as data:
-        data["areaID"] = call.data
+        with bot.retrieve_data(call.from_user.id) as data:
+            data["areaID"] = call.data
 
-    bot.register_next_step_handler(call.message, get_num_hotels)
+        bot.register_next_step_handler(call.message, get_num_hotels)
 
-
+@bot.message_handler(state=FindInfoState.town_area)
+def error(message: Message) -> None:
+    bot.send_message(message.from_user.id, "Надо выбрать область из списка")
 
 
 @bot.message_handler(state=FindInfoState.num_hotels)
@@ -62,14 +71,16 @@ def callback_if_need_photo(message: Message) -> None:
 
     with bot.retrieve_data(message.from_user.id) as data:
         data["if_need_photo"] = message.text
-
-    if message.text == "Да":
+        text = "Вам нужно вывести {} отеля?".format(data["num_hotels"])
+    if message.text.lower() == "да":
         bot.send_message(message.from_user.id, "Сколько фото вывести")
         bot.set_state(message.from_user.id, FindInfoState.num_photo)
-    elif message.text == "Нет":
-        bot.set_state(message.from_user.id, FindInfoState.exit)
+    elif message.text.lower() == "нет":
+        bot.set_state(message.from_user.id, FindInfoState.put_results)
+        bot.send_message(message.from_user.id, text, reply_markup=ok_choise())
+    else:
+        bot.send_message(message.from_user.id, "Надо нажать на кнопку или написать да/нет")
 
-    # print(data["if_need_photo"])
 
 
 @bot.message_handler(state=FindInfoState.num_photo)
@@ -77,35 +88,50 @@ def get_num_photo(message: Message) -> None:
     if message.text.isdigit():
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
             data["num_photo"] = int(message.text)
-        bot.set_state(message.from_user.id, FindInfoState.exit, message.chat.id)
+            text1 = "Вам нужно вывести {} отеля с {} фото?".format(data["num_hotels"], data["num_photo"])
+        bot.set_state(message.from_user.id, FindInfoState.put_results, message.chat.id)
+        bot.send_message(message.from_user.id, text1, reply_markup=ok_choise())
+
     else:
         bot.send_message(message.from_user.id, "Количество фото должно быть цифрой")
 
-@bot.message_handler(state=FindInfoState.exit)
+
+@bot.message_handler(state=FindInfoState.put_results)
 def output_res(message: Message) -> None:
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    if message.text.lower() == "да":
+        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
 
-        hotels = get_hotels(data["areaID"])
+            # print(data)
 
-        if data["request"] == "/lowprice":
-            res_hotels = lowprice(hotels=hotels, count=data["num_hotels"], max_count=10)
-        elif data["request"] == "/highprice":
-            res_hotels = highprice(hotels=hotels, count=data["num_hotels"], max_count=10)
+            hotels = get_hotels(data["areaID"])
 
-        bot.send_message(message.chat.id, "Результаты поиска:\n")
-        for hotel in res_hotels:
-            text = "Название отеля: {name}\n Адрес: {adress}\n Расстояние до центра: {distance}\n Цена: {price}\n".format(
-                name=hotel["name"],
-                adress=hotel["address"],
-                distance=hotel["distance"],
-                price=hotel["price"],
-            )
-            bot.send_message(message.chat.id, text)
+            if data["request"] == "/lowprice":
+                res_hotels = lowprice(hotels=hotels, count=data["num_hotels"], max_count=10)
+            elif data["request"] == "/highprice":
+                res_hotels = highprice(hotels=hotels, count=data["num_hotels"], max_count=10)
 
-            if data["if_need_photo"] == "Да":
-                bot.send_message(message.chat.id, "Фото:")
-                for photo in get_photos(hotel["id"], data["num_photo"]):
-                    bot.send_photo(message.chat.id, str(photo).format("s"))
+            bot.send_message(message.chat.id, "Результаты поиска:\n")
+            for hotel in res_hotels:
+                text = "Название отеля: {name}\n Адрес: {adress}\n Расстояние до центра: {distance}\n Цена: {price}\n".format(
+                    name=hotel["name"],
+                    adress=hotel["address"],
+                    distance=hotel["distance"],
+                    price=hotel["price"],
+                )
+                bot.send_message(message.chat.id, text)
+
+                if data["if_need_photo"] == "Да":
+                    photos = get_photos(hotel["id"], data["num_photo"])
+                    if photos:
+                        bot.send_message(message.chat.id, "Фото:")
+                        for photo in photos:
+                            # with open(photo, "rb") as photo_data:
+                            bot.send_photo(message.chat.id, photo)
+                    else:
+                        bot.send_message(message.chat.id, "Нет фото для этого отеля")
+
+    else:
+        bot.send_message(message.chat.id, "Для продолжения нужно нажать на кнопку'да' или написать да")
 
 
 

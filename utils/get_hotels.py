@@ -14,7 +14,7 @@ def get_hotels(town_ID):
 
     url = "https://hotels4.p.rapidapi.com/properties/list"
 
-    querystring = {"destinationId":town_ID,"pageNumber":"1","pageSize":"25","checkIn":checkIn,"checkOut":checkOut,"adults1":"1","sortOrder":"PRICE","locale":"en_US","currency":"USD"}
+    querystring = {"destinationId":town_ID,"pageNumber":"1","pageSize":"25","checkIn":checkIn,"checkOut":checkOut,"adults1":"1","sortOrder":"PRICE","locale":"ru_RU","currency":"RUB"}
 
     headers = {
         "X-RapidAPI-Key": os.getenv('RAPID_API_KEY'),

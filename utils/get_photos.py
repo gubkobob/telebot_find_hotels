@@ -1,6 +1,7 @@
 from utils.request_to_api import request_to_api
 import os
 import json
+import re
 
 
 def get_photos(hotel_id, n_photos, max_n_photos=10):
@@ -20,13 +21,13 @@ def get_photos(hotel_id, n_photos, max_n_photos=10):
 
     response = request_to_api(url=url, headers=headers, querystring=querystring)
     data_response = json.loads(response.text)
-
     photos_list = []
     i = 0
 
     for photo in data_response["hotelImages"]:
         if i < n_photos:
-            photos_list.append(photo["baseUrl"])
+            photo_with_size = re.sub(r"{size}", "s", photo["baseUrl"])
+            photos_list.append(photo_with_size)
         else:
             break
         i += 1
