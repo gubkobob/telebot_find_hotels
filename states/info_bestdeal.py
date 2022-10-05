@@ -3,6 +3,7 @@ from telebot.handler_backends import State, StatesGroup
 class BestdealInfoState(StatesGroup):
 
     town = State()
+    town_area = State()
     min_price = State()
     max_price = State()
     min_dist = State()

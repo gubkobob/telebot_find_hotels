@@ -1,1 +1,2 @@
-from . import find_info, info_bestdeal
+from . import find_info
+from . import info_bestdeal

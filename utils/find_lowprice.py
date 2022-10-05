@@ -1,7 +1,7 @@
 
 from operator import itemgetter
 
-def lowprice(hotels, count, max_count):
+def lowprice(hotels, count, max_count=10):
 
     if count > max_count:
         count = max_count

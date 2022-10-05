@@ -1,6 +1,7 @@
 from loader import bot
 from states.find_info import FindInfoState
 from telebot.types import Message
+from telebot.types import InputMediaPhoto
 from keyboards.inline.city_choise import city_choise
 from keyboards.reply.yes_no_choise import yes_no_choise
 from keyboards.reply.ok_choise import ok_choise
@@ -38,8 +39,16 @@ def get_town(message: Message) -> None:
         bot.send_message(message.from_user.id, "Название города может содержать только буквы")
 
 
-@bot.callback_query_handler(func=lambda call: True)
+@bot.message_handler(state=FindInfoState.town_area)
+def key(call):
+    if bot.get_state(call.from_user.id) == FindInfoState.town_area:
+        return True
+    else:
+        return False
+
+@bot.callback_query_handler(func=lambda call: key(call))
 def callback_place(call):
+
     if call.data:
         bot.send_message(call.message.chat.id, "Сколько отелей вывести в результате")
         bot.set_state(call.from_user.id, FindInfoState.num_hotels)
@@ -48,6 +57,7 @@ def callback_place(call):
             data["areaID"] = call.data
 
         bot.register_next_step_handler(call.message, get_num_hotels)
+    # bot.answer_callback_query(call.id)
 
 @bot.message_handler(state=FindInfoState.town_area)
 def error(message: Message) -> None:
@@ -118,17 +128,28 @@ def output_res(message: Message) -> None:
                     distance=hotel["distance"],
                     price=hotel["price"],
                 )
-                bot.send_message(message.chat.id, text)
+                # bot.send_message(message.chat.id, text)
 
                 if data["if_need_photo"] == "Да":
                     photos = get_photos(hotel["id"], data["num_photo"])
                     if photos:
-                        bot.send_message(message.chat.id, "Фото:")
+
+                        media_group = []
+
+                        # bot.send_message(message.chat.id, "Фото:")
+                        num = 0
                         for photo in photos:
                             # with open(photo, "rb") as photo_data:
-                            bot.send_photo(message.chat.id, photo)
+                            media_group.append(InputMediaPhoto(photo, caption=text if num == 0 else ''))
+                            num += 1
+                        bot.send_media_group(message.chat.id, media=media_group)
+                            # bot.send_photo(message.chat.id, photo)
                     else:
-                        bot.send_message(message.chat.id, "Нет фото для этого отеля")
+                        text = "\n".join(text, "У отеля нет фото")
+                        bot.send_message(message.chat.id, text)
+                else:
+                    bot.send_message(message.chat.id, text)
+
 
     else:
         bot.send_message(message.chat.id, "Для продолжения нужно нажать на кнопку'да' или написать да")

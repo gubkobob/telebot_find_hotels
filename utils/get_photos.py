@@ -26,7 +26,7 @@ def get_photos(hotel_id, n_photos, max_n_photos=10):
 
     for photo in data_response["hotelImages"]:
         if i < n_photos:
-            photo_with_size = re.sub(r"{size}", "s", photo["baseUrl"])
+            photo_with_size = re.sub(r"{size}", "w", photo["baseUrl"])
             photos_list.append(photo_with_size)
         else:
             break
