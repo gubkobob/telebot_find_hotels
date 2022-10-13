@@ -10,9 +10,11 @@ from utils.find_lowprice import lowprice
 from utils.find_highprice import highprice
 from utils.get_photos import get_photos
 from utils.get_areas import get_areas
+from database.db_hotels import *
+from datetime import datetime
 
 
-@bot.message_handler(commands=['lowprice', 'highprice'])
+@bot.message_handler(state="*", commands=['lowprice', 'highprice'])
 def survey(message: Message) -> None:
     bot.set_state(message.from_user.id, FindInfoState.town, message.chat.id)
     bot.send_message(message.from_user.id, "Введите город для поиска отелей")
@@ -66,14 +68,14 @@ def error(message: Message) -> None:
 
 @bot.message_handler(state=FindInfoState.num_hotels)
 def get_num_hotels(message: Message) -> None:
-    if message.text.isdigit():
+    if message.text.isdigit() and int(message.text) > 0:
         bot.send_message(message.from_user.id, "Нужны ли Вам фото отелей", reply_markup=yes_no_choise())
         bot.set_state(message.from_user.id, FindInfoState.photo_choise, message.chat.id)
 
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
             data["num_hotels"] = int(message.text)
     else:
-        bot.send_message(message.from_user.id, "Количество отелей должно быть цифрой")
+        bot.send_message(message.from_user.id, "Количество отелей должно быть цифрой > 0")
 
 
 @bot.message_handler(state=FindInfoState.photo_choise)
@@ -120,37 +122,54 @@ def output_res(message: Message) -> None:
             elif data["request"] == "/highprice":
                 res_hotels = highprice(hotels=hotels, count=data["num_hotels"], max_count=10)
 
+            if not Person.select().where(Person.telegram_id == message.from_user.id):
+                my_person = Person.create(telegram_id=message.from_user.id, name=message.from_user.full_name)
+            else:
+                my_person = Person.get(Person.telegram_id == message.from_user.id)
+
+            my_datetime = datetime.now()
+            db_datetime = DateTime.create(name_id=my_person, when=my_datetime, command=data["request"])
+
+
             bot.send_message(message.chat.id, "Результаты поиска:\n")
-            for hotel in res_hotels:
-                text = "Название отеля: {name}\n Адрес: {adress}\n Расстояние до центра: {distance}\n Цена: {price}\n".format(
-                    name=hotel["name"],
-                    adress=hotel["address"],
-                    distance=hotel["distance"],
-                    price=hotel["price"],
-                )
-                # bot.send_message(message.chat.id, text)
 
-                if data["if_need_photo"] == "Да":
-                    photos = get_photos(hotel["id"], data["num_photo"])
-                    if photos:
 
-                        media_group = []
+            if len(res_hotels) > 0:
+                for hotel in res_hotels:
+                    text = "Название отеля: {name}\n Адрес: {adress}\n Расстояние до центра: {distance}\n Цена: {price}\n".format(
+                        name=hotel["name"],
+                        adress=hotel["address"],
+                        distance=hotel["distance"],
+                        price=hotel["price"],
+                    )
 
-                        # bot.send_message(message.chat.id, "Фото:")
-                        num = 0
-                        for photo in photos:
-                            # with open(photo, "rb") as photo_data:
-                            media_group.append(InputMediaPhoto(photo, caption=text if num == 0 else ''))
-                            num += 1
-                        bot.send_media_group(message.chat.id, media=media_group)
-                            # bot.send_photo(message.chat.id, photo)
+                    Hotels.create(name_hotel=hotel["name"], name_hotel_when=db_datetime)
+
+                    if data["if_need_photo"] == "Да":
+                        photos = get_photos(hotel["id"], data["num_photo"])
+                        if photos:
+
+                            media_group = []
+
+
+                            num = 0
+                            for photo in photos:
+
+                                media_group.append(InputMediaPhoto(photo, caption=text if num == 0 else ''))
+                                num += 1
+                            bot.send_media_group(message.chat.id, media=media_group)
+
+                        else:
+                            text = "\n".join(text, "У отеля нет фото")
+                            bot.send_message(message.chat.id, text)
+
                     else:
-                        text = "\n".join(text, "У отеля нет фото")
                         bot.send_message(message.chat.id, text)
-                else:
-                    bot.send_message(message.chat.id, text)
+            else:
+                bot.send_message(message.chat.id, "нет результатов")
 
 
+        bot.delete_state(message.from_user.id, message.chat.id)
     else:
         bot.send_message(message.chat.id, "Для продолжения нужно нажать на кнопку'да' или написать да")
 

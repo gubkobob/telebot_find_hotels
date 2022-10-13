@@ -1,1 +1,1 @@
-from . import survey, survey_bestdeal
+from . import survey, survey_bestdeal, survey_history

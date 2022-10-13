@@ -16,18 +16,21 @@ def get_areas(town_name="new york"):
     response = request_to_api(url=url, headers=headers, querystring=querystring)
 
     pattern1 = r'(?<="CITY_GROUP",).+?[\]]'
-    find = re.search(pattern1, response.text)
-    if find:
-        data_response = json.loads(f"{{{find[0]}}}")
-
-    pattern2 = r"<span class='highlighted'>"
-    pattern3 = r"<\/span>"
-
     cities = []
-    for area in data_response["entities"]:
-        name = re.sub(pattern2, "", area["caption"])
-        name = re.sub(pattern3, "", name)
-        cities.append({'city_name': name, "destination_id": area["destinationId"]})
+    try:
+        find = re.search(pattern1, response.text)
+        if find:
+            data_response = json.loads(f"{{{find[0]}}}")
 
+        pattern2 = r"<span class='highlighted'>"
+        pattern3 = r"<\/span>"
+
+
+        for area in data_response["entities"]:
+            name = re.sub(pattern2, "", area["caption"])
+            name = re.sub(pattern3, "", name)
+            cities.append({'city_name': name, "destination_id": area["destinationId"]})
+    except Exception:
+        print("нет ответа от сервера")
     return cities
 
