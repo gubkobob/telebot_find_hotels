@@ -4,6 +4,8 @@ class BestdealInfoState(StatesGroup):
 
     town = State()
     town_area = State()
+    check_in = State()
+    check_out = State()
     min_price = State()
     max_price = State()
     min_dist = State()

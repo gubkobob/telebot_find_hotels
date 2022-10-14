@@ -6,12 +6,7 @@ from utils.request_to_api import request_to_api
 import re
 
 
-def get_hotels(town_ID):
-
-    today = datetime.date.today()
-    tomorrow = today + datetime.timedelta(days=1)
-    checkIn = str(today)
-    checkOut = str(tomorrow)
+def get_hotels(town_ID, checkIn, checkOut):
 
     url = "https://hotels4.p.rapidapi.com/properties/list"
 

@@ -12,12 +12,16 @@ from utils.get_areas import get_areas
 import re
 from database.db_hotels import *
 from datetime import datetime
+from utils.check_data_in import check_data_in
+from utils.check_data_out import check_data_out
+from utils.get_num_days import get_num_days
+
 
 
 @bot.message_handler(state="*", commands=['bestdeal'])
 def survey_bestdeal(message: Message) -> None:
     bot.set_state(message.from_user.id, BestdealInfoState.town, message.chat.id)
-    bot.send_message(message.from_user.id, "Введите город для поиска отелей")
+    bot.send_message(message.from_user.id, " Введите город для поиска отелей.")
 
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         data["request"] = message.text
@@ -49,15 +53,49 @@ def key1(call):
 
 @bot.callback_query_handler(func=lambda call: key1(call))
 def callback_place1(call):
-    if call.data:
-        bot.send_message(call.message.chat.id, "Введите минимальную цену номера в отеле")
-        bot.set_state(call.from_user.id, BestdealInfoState.min_price)
 
-        with bot.retrieve_data(call.from_user.id) as data:
-            data["areaID"] = call.data
+        if call.data:
+            bot.send_message(call.message.chat.id, "Введите дату заезда в формате YYYY-MM-DD не ранее завтра")
+            bot.set_state(call.from_user.id, BestdealInfoState.check_in)
 
-        bot.register_next_step_handler(call.message, get_min_price)
-    # bot.answer_callback_query(call.id)
+            with bot.retrieve_data(call.from_user.id) as data:
+                data["areaID"] = call.data
+
+            bot.register_next_step_handler(call.message, get_check_in)
+
+@bot.message_handler(content_types=["text"], state=BestdealInfoState.town_area)
+def error(message: Message) -> None:
+    bot.send_message(message.from_user.id, "Надо выбрать область из списка")
+
+
+
+
+
+
+@bot.message_handler(state=BestdealInfoState.check_in)
+def get_check_in(message: Message) -> None:
+    if check_data_in(message.text):
+        bot.send_message(message.from_user.id, "Введите дату выезда в формате YYYY-MM-DD не ранее даты заезда")
+        bot.set_state(message.from_user.id, BestdealInfoState.check_out, message.chat.id)
+
+        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            data["check_in"] = message.text
+    else:
+        bot.send_message(message.from_user.id, "Дата в формате YYYY-MM-DD не ранее завтра!!!")
+
+
+@bot.message_handler(state=BestdealInfoState.check_out)
+def get_check_out(message: Message) -> None:
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        if check_data_out(message.text, data["check_in"]):
+            bot.send_message(message.from_user.id, "Введите минимальную цену номера в отеле")
+            bot.set_state(message.from_user.id, BestdealInfoState.min_price, message.chat.id)
+
+            data["check_out"] = message.text
+        else:
+            bot.send_message(message.from_user.id, "Дата в формате YYYY-MM-DD не ранее даты заезда!!!")
+
+
 
 
 @bot.message_handler(state=BestdealInfoState.min_price)
@@ -88,8 +126,7 @@ def get_max_price(message: Message) -> None:
 
 @bot.message_handler(state=BestdealInfoState.min_dist)
 def get_min_dist(message: Message) -> None:
-    # pattern = r"\d+\.{0,1}\d*"
-    # if re.match(pattern, message.text):
+
     try:
         float(message.text)
     except Exception:
@@ -104,8 +141,7 @@ def get_min_dist(message: Message) -> None:
 
 @bot.message_handler(state=BestdealInfoState.max_dist)
 def get_max_dist(message: Message) -> None:
-    # pattern = r"\d+\.{0,1}\d*"
-    # if re.match(pattern, message.text):
+
     try:
         float(message.text)
     except Exception:
@@ -183,7 +219,11 @@ def output_res(message: Message) -> None:
     if message.text.lower() == "да":
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
 
-            hotels = get_hotels_bestdeal(town_ID=data["areaID"], min_price=data["min_price"], max_price=data["max_price"])
+            hotels = get_hotels_bestdeal(town_ID=data["areaID"],
+                                         min_price=data["min_price"],
+                                         max_price=data["max_price"],
+                                         checkIn=data["check_in"],
+                                         checkOut=data["check_out"])
 
             if data["request"] == "/bestdeal":
                res_hotels = bestdeal(hotels=hotels, count=data["num_hotels"],
@@ -206,10 +246,10 @@ def output_res(message: Message) -> None:
                         name=hotel["name"],
                         adress=hotel["address"],
                         distance=hotel["distance"],
-                        price=hotel["price"],
+                        price=hotel["price"] * get_num_days(check_in=data["check_in"], check_out=data["check_out"]),
                     )
                     Hotels.create(name_hotel=hotel["name"], name_hotel_when=db_datetime)
-                    # bot.send_message(message.chat.id, text)
+
 
                     if data["if_need_photo"] == "Да":
                         photos = get_photos(hotel["id"], data["num_photo"])

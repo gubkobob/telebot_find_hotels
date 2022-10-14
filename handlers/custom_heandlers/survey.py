@@ -1,3 +1,5 @@
+import types
+
 from loader import bot
 from states.find_info import FindInfoState
 from telebot.types import Message
@@ -12,6 +14,9 @@ from utils.get_photos import get_photos
 from utils.get_areas import get_areas
 from database.db_hotels import *
 from datetime import datetime
+from utils.check_data_in import check_data_in
+from utils.check_data_out import check_data_out
+from utils.get_num_days import get_num_days
 
 
 @bot.message_handler(state="*", commands=['lowprice', 'highprice'])
@@ -48,22 +53,49 @@ def key(call):
     else:
         return False
 
-@bot.callback_query_handler(func=lambda call: key(call))
+@bot.callback_query_handler(func=lambda call:key(call))
 def callback_place(call):
 
     if call.data:
-        bot.send_message(call.message.chat.id, "Сколько отелей вывести в результате")
-        bot.set_state(call.from_user.id, FindInfoState.num_hotels)
+        bot.send_message(call.message.chat.id, "Введите дату заезда в формате YYYY-MM-DD не ранее завтра")
+        bot.set_state(call.from_user.id, FindInfoState.check_in)
 
         with bot.retrieve_data(call.from_user.id) as data:
             data["areaID"] = call.data
 
-        bot.register_next_step_handler(call.message, get_num_hotels)
-    # bot.answer_callback_query(call.id)
+        bot.register_next_step_handler(call.message, get_check_in)
 
-@bot.message_handler(state=FindInfoState.town_area)
+@bot.message_handler(content_types=["text"], state=FindInfoState.town_area)
 def error(message: Message) -> None:
     bot.send_message(message.from_user.id, "Надо выбрать область из списка")
+
+
+
+
+
+@bot.message_handler(state=FindInfoState.check_in)
+def get_check_in(message: Message) -> None:
+    if check_data_in(message.text):
+        bot.send_message(message.from_user.id, "Введите дату выезда в формате YYYY-MM-DD не ранее даты заезда")
+        bot.set_state(message.from_user.id, FindInfoState.check_out, message.chat.id)
+
+        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            data["check_in"] = message.text
+    else:
+        bot.send_message(message.from_user.id, "Дата в формате YYYY-MM-DD не ранее завтра!!!")
+
+
+@bot.message_handler(state=FindInfoState.check_out)
+def get_check_out(message: Message) -> None:
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        if check_data_out(message.text, data["check_in"]):
+            bot.send_message(message.from_user.id, "Сколько отелей вывести в результате")
+            bot.set_state(message.from_user.id, FindInfoState.num_hotels, message.chat.id)
+
+            data["check_out"] = message.text
+        else:
+            bot.send_message(message.from_user.id, "Дата в формате YYYY-MM-DD не ранее даты заезда!!!")
+
 
 
 @bot.message_handler(state=FindInfoState.num_hotels)
@@ -115,7 +147,7 @@ def output_res(message: Message) -> None:
 
             # print(data)
 
-            hotels = get_hotels(data["areaID"])
+            hotels = get_hotels(town_ID=data["areaID"], checkIn=data["check_in"], checkOut=data["check_out"])
 
             if data["request"] == "/lowprice":
                 res_hotels = lowprice(hotels=hotels, count=data["num_hotels"], max_count=10)
@@ -140,7 +172,7 @@ def output_res(message: Message) -> None:
                         name=hotel["name"],
                         adress=hotel["address"],
                         distance=hotel["distance"],
-                        price=hotel["price"],
+                        price=hotel["price"] * get_num_days(check_in=data["check_in"], check_out=data["check_out"]),
                     )
 
                     Hotels.create(name_hotel=hotel["name"], name_hotel_when=db_datetime)
