@@ -1,6 +1,7 @@
 from peewee import *
 
-db = SqliteDatabase('hotels.db')
+db = SqliteDatabase("hotels.db")
+
 
 class Person(Model):
     telegram_id = IntegerField()
@@ -21,11 +22,11 @@ class DateTime(Model):
 
 class Hotels(Model):
     name_hotel = CharField()
-    # name_hotel_who = ForeignKeyField(Person)
     name_hotel_when = ForeignKeyField(DateTime)
 
     class Meta:
         database = db
+
 
 with db:
     Person.create_table()

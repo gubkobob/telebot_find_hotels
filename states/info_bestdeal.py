@@ -1,7 +1,7 @@
 from telebot.handler_backends import State, StatesGroup
 
-class BestdealInfoState(StatesGroup):
 
+class BestdealInfoState(StatesGroup):
     town = State()
     town_area = State()
     check_in = State()

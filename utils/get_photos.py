@@ -5,7 +5,6 @@ import re
 
 
 def get_photos(hotel_id, n_photos, max_n_photos=10):
-
     if n_photos > max_n_photos:
         n_photos = max_n_photos
 
@@ -13,10 +12,9 @@ def get_photos(hotel_id, n_photos, max_n_photos=10):
 
     querystring = {"id": str(hotel_id)}
 
-
     headers = {
-        "X-RapidAPI-Key": os.getenv('RAPID_API_KEY'),
-        "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
+        "X-RapidAPI-Key": os.getenv("RAPID_API_KEY"),
+        "X-RapidAPI-Host": "hotels4.p.rapidapi.com",
     }
 
     response = request_to_api(url=url, headers=headers, querystring=querystring)
@@ -32,5 +30,6 @@ def get_photos(hotel_id, n_photos, max_n_photos=10):
             break
         i += 1
     return photos_list
+
 
 # print(get_photos("1178275040"))

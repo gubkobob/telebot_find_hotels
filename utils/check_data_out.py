@@ -1,6 +1,7 @@
 import datetime
 import re
 
+
 def check_data_out(data_str, data_in):
     pattern = r"\d{4}-\d{2}-\d{2}"
     correctDate = False
@@ -17,7 +18,9 @@ def check_data_out(data_str, data_in):
         except ValueError:
             correctDate = False
         else:
-            if datetime.datetime(year, day, month) < datetime.datetime(year_out,day_out,month_out):
+            if datetime.datetime(year, day, month) < datetime.datetime(
+                year_out, day_out, month_out
+            ):
                 correctDate = False
             else:
                 correctDate = True

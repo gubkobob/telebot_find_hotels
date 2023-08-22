@@ -1,6 +1,7 @@
 import datetime
 import re
 
+
 def check_data_in(data_str):
     pattern = r"\d{4}-\d{2}-\d{2}"
     correctDate = False

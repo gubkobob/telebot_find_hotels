@@ -1,17 +1,16 @@
 from operator import itemgetter
 import re
 
-def bestdeal(hotels, count, min_dist, max_dist, max_count=10):
 
+def bestdeal(hotels, count, min_dist, max_dist, max_count=10):
     if count > max_count:
         count = max_count
 
     my_result_hotels = []
     try:
-
         for hotel in hotels:
             distance = hotel["landmarks"][0]["distance"]
-            distance = re.sub(r'\,', '.', distance)
+            distance = re.sub(r"\,", ".", distance)
             distance = float(re.sub(r"км", "", distance))
             if distance <= 1:
                 k = 1
@@ -30,7 +29,9 @@ def bestdeal(hotels, count, min_dist, max_dist, max_count=10):
                 my_hotel["distance"] = hotel["landmarks"][0]["distance"]
                 my_hotel["price"] = hotel["ratePlan"]["price"]["exactCurrent"]
                 my_hotel["id"] = hotel["id"]
-                my_hotel["koef"] = k * my_hotel["price"] # коэффициент для выбора наилучшего отеля по расстоянию и цене
+                my_hotel["koef"] = (
+                    k * my_hotel["price"]
+                )  # коэффициент для выбора наилучшего отеля по расстоянию и цене
                 my_result_hotels.append(my_hotel)
 
         my_result_hotels = sorted(my_result_hotels, key=itemgetter("koef"))
